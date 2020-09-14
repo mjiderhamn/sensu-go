@@ -291,6 +291,16 @@ func (r *namespaceImpl) Events(p schema.NamespaceEventsFieldResolverParams) (int
 	res := newOffsetContainer(p.Args.Offset, p.Args.Limit)
 	nsp := p.Source.(*corev2.Namespace)
 
+	// extract field selectors and lift into context
+	filters := make([]string, 0, len(p.Args.Filters))
+	for _, f := range p.Args.Filters {
+		if strings.HasPrefix(f, "fieldSelector:") {
+			p.Context = selector.ContextWithSelector(ctx, f[15:])
+		} else {
+			filters = append(filters, f)
+		}
+	}
+
 	// fetch
 	results, err := loadEvents(p.Context, nsp.Name)
 	if err != nil {
@@ -298,7 +308,7 @@ func (r *namespaceImpl) Events(p schema.NamespaceEventsFieldResolverParams) (int
 	}
 
 	// filter
-	matches, err := filter.Compile(p.Args.Filters, EventFilters(), corev2.EventFields)
+	matches, err := filter.Compile(filters, EventFilters(), corev2.EventFields)
 	if err != nil {
 		return res, err
 	}
