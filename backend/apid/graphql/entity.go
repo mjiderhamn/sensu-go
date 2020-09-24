@@ -108,7 +108,15 @@ func (r *entityImpl) Status(p graphql.ResolveParams) (interface{}, error) {
 	src := p.Source.(*corev2.Entity)
 
 	// fetch
-	results, err := loadEvents(p.Context, src.Namespace)
+	ops := selector.Selector{Operations: selector.Operations[]{
+		{
+			LValue: "event.entity.name",
+			Operator: selector.DoubleEqualSignOperator,
+			RValue: src.Metadata.Name,
+		},
+	}}
+	ctx := selector.ContextWithSelector(p.Context, ops)
+	results, err := c.ListEvents(ctx, &store.SelectionPredicate{})
 	if err != nil {
 		return 0, err
 	}
